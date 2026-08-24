@@ -1,0 +1,316 @@
+Docker & Container Basics — Study Notes
+Developers vs. Operations — The Old Problem
+
+
+================
+|  SECTION 1:  |
+================
+
+
+In traditional software delivery, developers wrote the code and a separate operations team handled deployment. To get an app running, operations had to manually gather and configure multiple files — dependencies, environment settings, server configs — and make them all work together on the target machine. This was slow, error-prone, and highly dependent on the specific environment it was deployed to. An app that worked fine on a developer's laptop could easily break on the server because the environments weren't identical.
+
+How Docker Solved This
+
+Docker packages an application together with everything it needs to run — code, dependencies, runtime, system libraries — into one self-contained unit. That unit behaves the same way no matter where it runs.
+
+The process:
+
+Developers write a Dockerfile — a plain text file with step-by-step instructions for how to build the application into a container (what base system to start from, what to copy in, how to run it).
+The Dockerfile is used to build a Docker Image — a packaged, ready-to-run snapshot of the application and everything it needs.
+The Image is used to run the application as a container — a live, running instance of that image.
+
+Because the image contains everything the app needs, it runs the same way on a developer's laptop, a test server, or in production. That consistency is what closed the gap between developers and operations — and that convergence is a big part of what gave rise to DevOps: developers and operations working from the same reproducible artifact instead of two disconnected processes.
+
+Docker Engine is the software that actually builds images and runs containers. It's available on Linux, Mac, Windows, and in the cloud — the same Dockerfile produces the same result regardless of platform.
+
+Docker Hub - giant library of pre-bult container images - Jenkins, PostgreSQL,
+
+RUN A DOCKER IMAGE, WILL NOT HAVE TO INSTALL ANYMORE
+
+==============================================================
+|          SECTION 2:  Basic docker commands                 |
+==============================================================
+
+Getting Into Your Linux Environment
+wsl -d Ubuntu
+
+-------------------------------
+Essential Docker Commands     |
+-------------------------------
+
+Command	What it does
+
+--- CONTAINER MANAGEMENT ---
+docker ps                   # List all currently running containers
+docker ps -a                # List all containers (including stopped ones)
+docker run <image_name>     # Create and start a container from an image
+docker stop <container_id>  # Gracefully stop a running container
+docker rm <container_id>    # Remove a stopped container
+
+--- IMAGE MANAGEMENT ---
+docker images               # List all locally available images
+docker history <image_name> # Show the history and layers of an image
+docker rmi <image_name>     # Remove a local image
+
+--- MULTI-CONTAINER (COMPOSE) ---
+docker compose up --build   # Build images and start the project containers
+
+--- COMMON RUN FLAGS & ARGUMENTS ---
+-p <host_port>:<container_port>
+    Makes your app reachable from your computer.
+    Example: -p 9090:8080 lets you open the app at http://localhost:9090
+
+-i
+    Keeps the container running so it can accept input.
+    (You usually use this together with -t.)
+
+-t
+    Makes the container act like a normal terminal window.
+
+-it
+    Opens an interactive terminal inside the container.
+    You will see logs on your screen.
+    You can type commands inside the container.
+
+--name <container_name>
+    Gives your container a custom name instead of a random one.
+
+--mount type=bind,source=<host_path>,target=<container_path>
+    Lets the container use a folder or file from your computer.
+    Example: share logs, configs, or code with the container.
+
+================================================================================
+Notes:
+* Replace placeholders like <image_name> or <container_id> with your actual data.
+* Run 'docker --help' in your terminal for a full list of commands.
+
+
+
+-----------------------------------------------------
+Building and Running Your Java App in Docker        |
+-----------------------------------------------------
+
+
+Create a Dockerfile in the root of your project.
+
+1)  Build your project
+    ./gradlew clean build --refresh-dependencies
+1)   Build your JAR file using Gradle:
+   ./gradlew bootJar
+2)   Build the Docker image from your Dockerfile, tagging it java-docker:
+   docker build -t java_docker .
+3)   Run the container, mapping port 9090 on your machine to port 8080 inside the container:  **  Once you execute the docker run command, this makes an image a container.
+   docker run -p 9090:8080 java-docker
+Visit http://localhost:8080 — take you to Jenkins
+Visit http://localhost:9090 — this is the mapped port from Step 4, taking you to your Java/Docker app's endpoint through the port mapping you set up.
+4)  To Run Docker in the background   docker run -d (name)     OR   docker run -d -p 9090:8080 java-docker
+
+---------------------------
+To delete docker images:  |
+---------------------------
+
+1) docker ps -a
+2) docker rm (container id)                     usually more than 1
+3) docker rmi nginx:latest
+
+**  docker system prune              This will remove/delete all images
+
+=============================================================================
+|          SECTION 3: Image tags and Port Mapping                            |
+==============================================================================
+
+------------
+IMAGE TAGS: |     (the tags should be the date you go to production)   ( :__   A docker tag identifies the version of the image, not the container)
+------------
+
+-t
+
+example:  java-docker:dev      java-docker:test      java-docker:prod         (you have to build it using the docker build -t command)
+
+docker run nginx                       (will default to latest version)  or  docker run nginx:latest
+docker run nginx:7.4                   (will tag this to get version nginx 7.4)
+
+OR for your java-docker app
+1)  docker build -t java-docker:1            
+2) docker run -p 9090:8080 java-docker:1
+                             
+
+INPUTS:
+docker run -i java-docker                         (with logs)
+docker run -it -p 9090:8080 java-docker         (interactive terminal background and port mapping)
+docker log -f (container id)
+
+----------------
+PORT MAPPING:  |
+----------------
+
+-p (IP)
+
+You can host different version of your app on different IPs
+
+You can also run someone elses app (image) on your computer and then view it on your localhost
+Note:  once you run,  docker run -p  80:5000 kodekloud/webapp,  Docker check if the image exists locally if not then pulls from Docker Hub, then it makes the image into a container
+Command:  docker run -p 80:5000 kodekloud/webapp
+Command:  localhost:80
+
+----------------
+VOLUME MOUNT   |
+----------------
+
+Used to mount a log or database to your CONTAINER
+
+docker run -v  = volume mount
+Used for databases, uploads, logs,   /  Config files (app.properties)  Dev - mount source code
+
+docker run -v /home/kevin/log:/app/logs java-docker          (This container writes logs and your computer stores them.)
+
+OR (for value pairs)
+
+docker run --mount type=____,source=_____,target=_____
+
+
+--------------------
+INSPECT AND LOGS   |
+--------------------
+
+docker inspect java-docker
+shows details on the container
+
+docker logs (container id)
+
+
+-------------------------------------
+CONTAINER NAMES in DOCKER DESKTOP   |
+-------------------------------------
+
+The image will have java-docker but docker always makes random names for the container unless you set the name for the container. 
+to show a container name you want:
+
+docker run -p 9090:8080 --name java-docker-container java-docker                          (java-docker-container)
+
+
+---------------------------------------------------------
+DOCKER IMAGES                 |   DOCKER WORKFLOW       |
+---------------------------------------------------------
+To a Repo      (like GITHUB)
+
+
+1)  docker tag java-docker:latest koopatroopa23/java-docker:latest
+
+2)  docker push koopatroopa23/java-docker:latest
+
+connect to your Docker HUb account so you publish it to other machines
+
+The other person then does
+docker pull yourname/java-docker
+docker run yourname/java-docker
+
+3)  https://hub.docker.com/r/koopatroopa23/java-docker      
+      Run the image
+4)  Docker Desktop -  open and put in name and port you want to use then start it.   
+5)  Go to localhost:9090   - Java app running from the cloud‑hosted image
+
+🧊 Image
+A blueprint
+
+Stored on Docker Hub or your machine
+
+Not running
+
+No ports
+
+No processes
+
+No network
+
+Just a packaged app
+
+🔥 Container
+A running instance of the image
+
+Has its own filesystem
+
+Has its own network
+
+Has ports
+
+Has logs
+
+Can be started/stopped/restarted
+
+
+------------
+Dockerfile  |
+------------
+FROM  OS
+RUN Execute Commands During Image Build
+RUN
+COPY Copy Files Into the Image
+ENV  Set Environment Variables
+ENTRYPOINT  The Main Command That Runs Your App
+
+FROM,RUN,RUN,COPY,ENV,ENTRYPOINT  are all instruction
+everything on right is an arguement 
+
+it takes everything that you have and downloads from the internet to make a successful image
+
+------------------------------
+TROUBLESHOOTING Dockerfile   |
+------------------------------
+
+docker run -it <image>
+    Runs the container and shows everything happening inside.
+    You will see logs on your screen.
+    You can type commands inside the container.
+    Useful when your container starts and immediately exits.
+
+docker run -it <image> bash
+    Opens a shell inside the container.
+    Lets you check files, folders, environment variables, and paths.
+    Perfect for debugging broken Dockerfiles.
+
+-------------------------------------------
+GETTING CREDS.YML FILE INTO DOCKER IMAGE   |  * DONT DO  -  These are problems
+-------------------------------------------
+
+
+Packages re-downloade, Secrets leak, Architecture lock-in, sequential stages
+* It gets baked into image. 
+ENV, COPY + rm, Multi-stage build, --build.arg
+
+
+-----------------------------------------
+BUILDKIT  / buildx                      |
+-----------------------------------------
+
+
+BuildKit is Docker’s advanced build engine, and `docker buildx` enables all of its modern features:
+
+1. **Cache mounts**
+   Use `RUN --mount=type=cache` to speed up builds by caching package downloads and build artifacts.
+
+2. **Secret mounts**
+   Use `RUN --mou
+   nt=type=secret,id=mykey` to securely access secrets (API keys, tokens) during the build without baking them into the image.
+
+3. **Multi‑platform builds**
+   Build images for multiple operating systems and architectures:
+   docker buildx build --platform linux/amd64,linux/arm64 -t java-docker --push .
+
+4. **Parallel build stages**
+   Build multiple stages (e.g., frontend + backend) at the same time:
+   docker buildx build -t java-docker .
+
+
+--------------------
+DOCKER INIT        |
+--------------------
+
+Command:  docker init
+
+Its a template, Use when starting new project
+
+it generates Dockerfile, .dockerignore,  compose.yml, README.Docker.md
+**********************************  NOTE:   It just worked with MAVEN ...  NOT GRADLE (you will have to redo your Dockerfile)
+
+
