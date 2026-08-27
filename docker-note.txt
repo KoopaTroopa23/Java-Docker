@@ -290,7 +290,7 @@ BuildKit is Docker’s advanced build engine, and `docker buildx` enables all of
    Use `RUN --mount=type=cache` to speed up builds by caching package downloads and build artifacts.
 
 2. **Secret mounts**
-   Use `RUN --mou
+   Use `RUN --mount
    nt=type=secret,id=mykey` to securely access secrets (API keys, tokens) during the build without baking them into the image.
 
 3. **Multi‑platform builds**
@@ -314,3 +314,323 @@ it generates Dockerfile, .dockerignore,  compose.yml, README.Docker.md
 **********************************  NOTE:   It just worked with MAVEN ...  NOT GRADLE (you will have to redo your Dockerfile)
 
 
+------------------------
+SLEEP COMMAND          |
+------------------------
+
+docker run <image> sleep 5
+    Runs the container and makes it wait for 5 seconds.
+
+In Dockerfile:
+    ENTRYPOINT ["sleep"]
+    Makes the container run "sleep" every time it starts.
+
+Notes:
+- Useful for testing containers.
+- Helps keep a container running when debugging.
+
+-----------------
+DOCKER COMPOSE  |
+-----------------
+
+Docker Compose = run multiple containers together
+(frontend, backend, database, etc.)
+
+1) Create a compose.yaml file
+    - List your services (app, redis, postgres, define networks)
+    - Add ports if needed
+
+2) Start everything:
+    docker compose up
+    Runs all services at once.
+
+3) Stop everything:
+    docker compose down
+
+Notes:
+- You do NOT use "docker run" for each service when using Compose.
+- Compose replaces multiple "docker run" commands.
+- Compose is for multi‑container setups.
+- Document everything in Readme file
+
+
+----------------
+DOCKER ENGINE  |
+----------------
+
+HHow Docker works under the hood:
+
+1) dockerd (Docker Daemon)
+    - The main background service.
+    - Handles containers, images, networks, volumes.
+
+2) REST API
+    - The interface the daemon exposes.
+    - Lets tools talk to Docker Engine.
+
+3) docker CLI
+    - The commands you type: docker run, docker stop, docker build.
+    - Sends requests to the REST API.
+    - The daemon does the actual work.
+
+
+------------------
+LINUX NAMESPACE  |
+------------------
+
+PID
+    Gives each container its own process list.
+    Containers cannot see processes from other containers.
+
+Network
+    Gives each container its own network stack.
+    Its own IP, ports, and network rules.
+
+IPC
+    Controls how containers share system messaging.
+    Keeps container communication separate.
+
+Mount
+    Gives each container its own filesystem view.
+    Controls what folders/files the container can see.
+
+UTS
+    Lets a container have its own hostname.
+    Makes each container look like its own machine.
+
+User
+    Gives each container its own user and permission system.
+    Maps container users to host users safely.
+
+----------------
+Docker Storage |
+----------------
+
+Where Docker stores its files:
+
+/var/lib/docker/
+
+Inside this folder:
+    containers/   → container data
+    image/        → images you built or pulled
+    volumes/      → persistent data
+    overlay2/     → layered filesystem for images + containers
+
+
+----------------------
+LAYERED ARCHITECTURE |
+----------------------
+
+1) Dockerfile
+    Instructions to build your image.
+
+2) docker build -t java-docker .
+    Creates the image using the Dockerfile.
+
+3) Image Layers
+    Each line in the Dockerfile becomes a layer.
+    Layers are reused to make builds faster.
+
+4) Container
+    When you run the image, Docker adds a writable layer on top.
+
+
+-------------------
+DOCKER NETWORKING |
+-------------------
+
+Default Networks:
+    bridge
+        - The normal network for containers.
+        - Containers get their own IP.
+        - Containers can talk to each other.
+
+    none
+        - No network at all.
+        - Container is completely isolated.
+
+    host
+        - Container shares the host’s network.
+        - No port mapping needed.
+        - Acts like it’s running directly on your machine.
+
+Examples:
+    docker run ubuntu
+        Uses the default bridge network.
+
+    docker run --network bridge web1
+    docker run --network bridge web2
+        Both containers can talk to each other.
+
+------------------------
+USER-DEFINED NETWORKS  |
+------------------------
+
+Why use them:
+    - Containers can find each other by name.
+    - Cleaner, easier networking.
+    - No need to remember IP addresses.
+
+Commands:
+
+    docker network create mynet
+        Creates a custom network.
+
+    docker run --network mynet --name web1 <image>
+    docker run --network mynet --name web2 <image>
+        Containers can talk using names:
+            web1 → web2
+            web2 → web1
+
+    docker inspect mynet
+        Shows details about the network.
+
+
+-------------------
+DOCKER REGISTRY   |
+-------------------
+
+A Docker Registry is a place where container images are stored.
+
+Think of it like a big online folder for images.
+
+Examples:
+    Docker Hub
+    GitHub Container Registry
+    Private company registries
+
+What happens:
+    - When you PUSH an image, it goes to the registry.
+    - When you RUN an image (like nginx), Docker pulls it from the registry.
+
+Example:
+    docker run nginx
+        This pulls the nginx image from Docker Hub.
+
+-------------------------
+CONTAINER ORCHESTRATION |
+-------------------------
+
+Why we need orchestration:
+    - More users = more load → need more containers.
+    - If a host crashes, your app should keep running.
+    - You want automatic scaling (up/down).
+    - You want load balancing.
+    - You want storage + config handled for you.
+    - You want to run hundreds or thousands of containers easily.
+
+What orchestration does:
+    - Starts containers across multiple machines.
+    - Restarts containers if they fail.
+    - Replaces crashed hosts automatically.
+    - Scales your app up or down.
+    - Distributes traffic (load balancing).
+    - Manages storage and configuration.
+
+------------------------
+DOCKER SWARM (SIMPLIFIED)
+------------------------
+
+Easy to set up.
+Not ideal for large production apps.
+Basic auto‑scaling only.
+
+How it works:
+    - Multiple hosts (machines).
+    - One becomes the Swarm Manager.
+    - Others become Worker Nodes.
+
+Commands:
+    docker swarm init
+        Creates the swarm on the manager.
+
+    docker service create --replicas=3 <image>
+        Runs 3 copies of your app across the swarm.
+
+Notes:
+    - Swarm lets you manage all nodes from one place.
+    - You don’t log into each machine manually.
+
+
+
+--------------------
+KUBERNETES          |
+--------------------
+How they work together:
+
+Docker:
+    - Builds your container image.
+    - Packages your Java app.
+    - Creates the thing you deploy.
+
+Kubernetes:
+    - Runs your containers on many machines.
+    - Handles scaling, load balancing, restarts, and failures.
+    - Can run thousands of container copies with one command.
+
+Think of it like this:
+    Docker = "Make my app into a container."
+    Kubernetes = "Run my containers everywhere automatically."
+
+
+------------------------
+KUBERNETES ARCHITECTURE |
+------------------------
+
+Cluster
+    A group of machines (nodes) working together.
+
+Worker Node
+    Runs your containers (called Pods).
+
+Master (Control Plane)
+    Watches all worker nodes.
+    Decides where containers should run.
+
+Main Master Components:
+    api-server      → Front door for all commands.
+    etcd            → Stores cluster data.
+    scheduler       → Decides which node runs a pod.
+    controllers     → Make sure everything stays healthy.
+
+On each Worker Node:
+    kubelet         → Talks to the master.
+    CRI             → Container Runtime Interface.
+    containerd/CRI-O→ Actually runs the containers.
+
+
+
+------------------------
+BASIC KUBERNETES COMMANDS
+------------------------
+
+Create a deployment:
+    kubectl create deployment java-docker --image=java-docker
+
+Scale it:
+    kubectl scale deployment java-docker --replicas=3
+
+Check pods:
+    kubectl get pods
+
+Delete:
+    kubectl delete deployment java-docker
+
+
+Kubernetes CLI
+
+kkubectl cluster-info
+    Shows info about the Kubernetes cluster.
+
+kubectl get nodes
+    Lists all worker nodes in the cluster.
+
+kubectl get pods
+    Lists all running pods.
+
+kubectl create deployment java-docker --image=java-docker
+    Creates a deployment using your Docker image.
+
+
+
+    Learn Docker with Hands On Coding Exercises. For beginners in DevOps
